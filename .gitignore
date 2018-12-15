@@ -1,0 +1,9 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/BigIntPrj/.vs/BigIntPrj/v15/ipch
+/BigIntPrj/.vs/BigIntPrj/v15
+/BigIntPrj/x64/Debug
+/BigIntPrj/Debug
+/.vs
