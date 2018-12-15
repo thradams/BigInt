@@ -102,3 +102,24 @@ int Multiply(Digit* a, Digit aSig, Digit* b, Digit bSig, Digit* result)
     }
     return 0;
 }
+
+
+int Parse(const char* psz, Digit* result, int nDigits)
+{
+    int localdigits = 0;
+    if ((*psz >= '0') && (*psz <= '9'))
+    {
+        Digit number = *psz - '0';
+        localdigits = Add(result, 1, &number, 1, result);
+        psz++;
+
+        while ((*psz >= '0') && (*psz <= '9'))
+        {
+            localdigits = MultiplyByDigit(result, localdigits, 10);
+            number = *psz - '0';
+            localdigits = Add(result, localdigits, &number, 1, result);
+            psz++;
+        }
+    }
+    return localdigits;
+}
