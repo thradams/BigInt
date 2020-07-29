@@ -94,15 +94,15 @@ function is_prime(n)
 
     return true
 
-    
+
 */
 
-    /*
-    function isPrime(p) {
-  for (let i = 2n; i * i <= p; i++) {
-    if (p % i === 0n) return false;
-  }
-  return true
+/*
+function isPrime(p) {
+for (let i = 2n; i * i <= p; i++) {
+  if (p % i === 0n) return false;
+}
+return true
 }
     */
 
@@ -120,7 +120,7 @@ function is_prime(n)
     else
     {
         tempsize = modulo(number, ndigits, _2, 1, temp);
-        
+
         //n mod 2 = 0
         if (is_zero(temp, tempsize))
             return false;
@@ -147,7 +147,7 @@ function is_prime(n)
 
         unsigned long i_plus_2[100] = { 0 };
         unsigned long i_plus_2_size = Add(i, isize, _2, 1, i_plus_2);
-                
+
         t2size = modulo(number, ndigits, i_plus_2, i_plus_2_size, t2);
         if (is_zero(t2, t2size))
             return false;
@@ -215,7 +215,7 @@ unsigned int modular_pow0(unsigned long base,
 void TestExpMod(const char* a, const char* e, const char* m, const char* result)
 {
     //15955 / 7996
-    
+
     unsigned long numberA[100] = { 0 };
     unsigned long numberASize = Parse(a, numberA, 100);
 
@@ -309,6 +309,10 @@ unsigned long copy_to(unsigned long a[], unsigned long asize, unsigned long out[
     return asize;
 }
 
+/*
+GCD (Greatest Common Divisor) or HCF (Highest Common Factor) of two numbers is the largest number that divides both of them.
+For example GCD of 20 and 28 is 4 and GCD of 98 and 56 is 14.
+*/
 unsigned long gcd(unsigned long a[], unsigned long asize, unsigned long b0[], unsigned long bsize, unsigned long out[])
 {
     unsigned long b[100];
@@ -335,12 +339,28 @@ unsigned long gcd(unsigned long a[], unsigned long asize, unsigned long b0[], un
     while (!is_zero(b, bsize))
     {
         unsigned long t[100];
-        unsigned long tsize =copy_to(b, bsize, t);
+        unsigned long tsize = copy_to(b, bsize, t);
         bsize = modulo(out, asize, b, bsize, b);
 
         asize = copy_to(t, tsize, out);
     }
     return sig_digits(out, asize);
+}
+
+/*
+ LCM (Least Common Multiple) of two numbers is the smallest number which can be divided by both numbers.
+ For example LCM of 15 and 20 is 60 and LCM of 5 and 7 is 35.
+*/
+
+unsigned long lcm(unsigned long a[], unsigned long asize, unsigned long b[], unsigned long bsize, unsigned long out[])
+{
+    assert(asize + bsize < 100);
+    unsigned long r1[100];
+    unsigned long r1size = Multiply(a, asize, b, bsize, r1);
+
+    unsigned long r2[100];
+    unsigned long r2size = gcd(a, asize, b, bsize, r2);
+    return division(r1, r1size, r2, r2size, out);
 }
 
 
@@ -418,9 +438,9 @@ int main()
 
     TestExpMod("123", "3", "4", "3");
     TestExpMod("312312312324324324312312312", "234324324324324324324", "5", "1");
-    
 
-     
+
+
     TestConversion("0", "0");
     TestConversion("1", "1");
     TestConversion("4294967295", "4294967295"); //UINT_MAX
@@ -451,7 +471,7 @@ int main()
     TestMultiplication("0", "0", "0");
     TestMultiplication("1", "0", "0");
     TestMultiplication("0", "1", "0");
- 
+
 
     TestDiv("489", "12", "40", "9");
     TestDiv("20142", "1013", "19", "895");
@@ -1335,6 +1355,21 @@ unsigned int modular_pow(unsigned long base[],
                          unsigned long modulusSize,
                          unsigned long result[])
 {
+    /*
+    https://en.wikipedia.org/wiki/Modular_exponentiation
+    function modular_pow(base, exponent, modulus) is
+    if modulus = 1 then
+        return 0
+    Assert :: (modulus - 1) * (modulus - 1) does not overflow base
+    result := 1
+    base := base mod modulus
+    while exponent > 0 do
+        if (exponent mod 2 == 1) then
+            result := (result * base) mod modulus
+        exponent := exponent >> 1
+        base := (base * base) mod modulus
+    return result
+    */
     if (modulusSize == 1 && modulus[0] == 1)
         return 0;
 
@@ -1342,7 +1377,7 @@ unsigned int modular_pow(unsigned long base[],
     //result : = 1
         //base : = base mod modulus
     baseSize = modulo(base, baseSize, modulus, modulusSize, base);
-    
+
     char buffer1[1000];
     printf("%s\n", to_string_repr(base, baseSize, buffer1));
 
@@ -1363,7 +1398,7 @@ unsigned int modular_pow(unsigned long base[],
             printf("result = %s\n", to_string_repr(result, resultSize, buffer1));
             printf("base = %s\n", to_string_repr(base, baseSize, buffer1));
 
-            
+
             r1Size = Multiply(result, resultSize, base, baseSize, r1);
             printf("result = %s\n", to_string_repr(r1, r1Size, buffer1));
 
