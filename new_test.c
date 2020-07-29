@@ -1,10 +1,5 @@
 ```c
-// bigint2.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
 
-#include <stdio.h>
-
-#pragma once
 #include <stdio.h>
 #include <limits.h>
 #include <assert.h>
@@ -12,7 +7,7 @@
 #include <stdlib.h>
 #include < time.h>
 
-#define BASE10
+//#define BASE10
 
 #ifdef BASE10
 #define LAST_DIGIT 9
@@ -22,13 +17,30 @@
 #define DIGIT_BASE 4294967296ull //UINT_MAX + 1
 #endif
 
+int sig_digits(unsigned long number[], int size);
+bool is_zero(unsigned long number[], int nsize);
+int compare(unsigned long  left[],
+            int leftSize,
+            unsigned long right[],
+            int rightSize);
 
-
+/*result tem que ser maior entre aSig e bSig + 1*/
 int Add(unsigned long a[], unsigned long aSig, unsigned long b[], unsigned long bSig, unsigned long result[]);
+/*result tem que ser igual ao maior*/
 int Subtract(unsigned long* a, unsigned long aSig, unsigned long* b, unsigned long bSig, unsigned long* result);
+
+
+/*result tem que ter o tamanho de aSig + 1*/
 int MultiplyByDigit(unsigned long* a, int aSig, unsigned long value);
-int Multiply(unsigned long* a, unsigned long aSig, unsigned long* b, unsigned long bSig, unsigned long* result);
+
+/*result tem que ter o tamanho de aSig + bSig*/
+int Multiply(const unsigned long a[], unsigned long aSig,
+             const unsigned long b[], unsigned long bSig,
+             unsigned long result[]);
+
 unsigned long Parse(const char* psz, unsigned long result[], int nDigits);
+
+/*result tem que ter o tamanho do right*/
 unsigned long modulo(unsigned long left[],
                      int leftSize,
                      unsigned long right[],
@@ -49,17 +61,107 @@ unsigned int modular_pow(unsigned long base[],
                          unsigned long modulusSize,
                          unsigned long result[]);
 
+/*result tem que ter o tamanho do left*/
 unsigned long longdiv(unsigned long left[],
                       int leftSize,
                       unsigned long right[],
                       int rightSize,
                       unsigned long out[]);
 
+/*result tem que ter o tamanho do left*/
 unsigned long division(unsigned long left[],
                        int leftSize,
                        unsigned long right[],
                        int rightSize,
                        unsigned long out[]);
+
+bool is_prime(unsigned long number[], int ndigits)
+{
+    /*
+    https://en.wikipedia.org/wiki/Primality_test
+function is_prime(n)
+    if n ≤ 3 then
+        return n > 1
+    else if n mod 2 = 0 or n mod 3 = 0
+        return false
+
+    let i ← 5
+
+    while i × i ≤ n do
+        if n mod i = 0 or n mod (i + 2) = 0
+            return false
+        i ← i + 6
+
+    return true
+
+    
+*/
+
+    /*
+    function isPrime(p) {
+  for (let i = 2n; i * i <= p; i++) {
+    if (p % i === 0n) return false;
+  }
+  return true
+}
+    */
+
+    unsigned long _3[] = { 3 };
+    unsigned long _2[] = { 2 };
+    unsigned long temp[100] = { 0 };
+    unsigned long tempsize = 0;
+
+    //n ≤ 3
+    if (compare(number, ndigits, _3, 1) <= 0)
+    {
+        unsigned long _1[] = { 1 };
+        return compare(number, ndigits, _1, 1) > 0;
+    }
+    else
+    {
+        tempsize = modulo(number, ndigits, _2, 1, temp);
+        
+        //n mod 2 = 0
+        if (is_zero(temp, tempsize))
+            return false;
+
+        //n mod 3 = 0
+        tempsize = modulo(number, ndigits, _3, 1, temp);
+
+        if (is_zero(temp, tempsize))
+            return false;
+    }
+
+    unsigned long i[100] = { 0 };
+    i[0] = 5;
+    unsigned long isize = 1;
+
+    unsigned long ii[100] = { 0 };
+    unsigned long iisize = Multiply(i, isize, i, isize, ii);
+    while (compare(ii, iisize, number, ndigits) <= 0)
+    {
+        unsigned long t2[100] = { 0 };
+        unsigned long t2size = modulo(number, ndigits, i, isize, t2);
+        if (is_zero(t2, t2size))
+            return false;
+
+        unsigned long i_plus_2[100] = { 0 };
+        unsigned long i_plus_2_size = Add(i, isize, _2, 1, i_plus_2);
+                
+        t2size = modulo(number, ndigits, i_plus_2, i_plus_2_size, t2);
+        if (is_zero(t2, t2size))
+            return false;
+
+
+        unsigned long _6[] = { 6 };
+        isize = Add(i, isize, _6, 1, i); /*atualiza i */
+        iisize = Multiply(i, isize, i, isize, ii); /*atualiza i * i */
+    }
+
+    return true;
+}
+
+
 
 void TestConversion(const char* in, const char* out)
 {
@@ -113,7 +215,7 @@ unsigned int modular_pow0(unsigned long base,
 void TestExpMod(const char* a, const char* e, const char* m, const char* result)
 {
     //15955 / 7996
-    unsigned long r = modular_pow0(123, 3, 4);
+    
     unsigned long numberA[100] = { 0 };
     unsigned long numberASize = Parse(a, numberA, 100);
 
@@ -198,22 +300,50 @@ void TestSubtration(const char* a, const char* b, const char* result)
 
 }
 
-/*
-function gcd(a, b)
-    while a ≠ b
-        if a > b
-            a := a − b
-        else
-            b := b − a
-    return a
+unsigned long copy_to(unsigned long a[], unsigned long asize, unsigned long out[])
+{
+    for (int i = 0; i < asize; i++)
+    {
+        out[i] = a[i];
+    }
+    return asize;
+}
 
+unsigned long gcd(unsigned long a[], unsigned long asize, unsigned long b0[], unsigned long bsize, unsigned long out[])
+{
+    unsigned long b[100];
+    copy_to(b0, bsize, b);
+
+    copy_to(a, asize, out);
+
+    /*
     function gcd(a, b)
-    while b ≠ 0
-        t := b
-        b := a mod b
-        a := t
-    return a
-*/
+        while a ≠ b
+            if a > b
+                a := a − b
+            else
+                b := b − a
+        return a
+
+        function gcd(a, b)
+        while b ≠ 0
+            t := b
+            b := a mod b
+            a := t
+        return a
+    */
+    while (!is_zero(b, bsize))
+    {
+        unsigned long t[100];
+        unsigned long tsize =copy_to(b, bsize, t);
+        bsize = modulo(out, asize, b, bsize, b);
+
+        asize = copy_to(t, tsize, out);
+    }
+    return sig_digits(out, asize);
+}
+
+
 void RSATest()
 {
     //Steps of RSA implementation :
@@ -276,8 +406,21 @@ void RSATest()
 }
 int main()
 {
-    TestExpMod("123", "3", "4", "3");
+    TestExpMod("2790", "413", "3233", "65");
 
+    TestMultiplication("65", "1", "65");
+    TestMultiplication("1", "65", "65");
+
+    modular_pow0(65, 17, 3233);
+    TestExpMod("65", "17", "3233", "2790");
+
+
+
+    TestExpMod("123", "3", "4", "3");
+    TestExpMod("312312312324324324312312312", "234324324324324324324", "5", "1");
+    
+
+     
     TestConversion("0", "0");
     TestConversion("1", "1");
     TestConversion("4294967295", "4294967295"); //UINT_MAX
@@ -308,6 +451,7 @@ int main()
     TestMultiplication("0", "0", "0");
     TestMultiplication("1", "0", "0");
     TestMultiplication("0", "1", "0");
+ 
 
     TestDiv("489", "12", "40", "9");
     TestDiv("20142", "1013", "19", "895");
@@ -344,9 +488,25 @@ int main()
             _itoa_s(a / b, r, 100, 10);
 
             char r2[100];
-            _itoa_s(a % b, r2, 100, 10);
 
+            _itoa_s(a % b, r2, 100, 10);
             TestDiv(s1, s2, r, r2);
+
+            //
+            _itoa_s(a * b, r2, 100, 10);
+            TestMultiplication(s1, s2, r2);
+
+            _itoa_s(a + b, r2, 100, 10);
+            TestAdd(s1, s2, r2);
+
+            _itoa_s(a - b, r2, 100, 10);
+            TestSubtration(s1, s2, r2);
+
+            //
+            //_itoa_s(a % b, r2, 100, 10);
+
+            //TestModule(s1, s2, r2);
+
         }
     }
 
@@ -375,6 +535,7 @@ int Add(unsigned long a[], unsigned long aSig,
         unsigned long long current = aj + bj + carry;
         result[i] = current % DIGIT_BASE;
         carry = current / DIGIT_BASE;
+        assert(carry == 0 || carry == 1);
     }
 
     if (carry != 0)
@@ -459,10 +620,17 @@ int MultiplyByDigit(unsigned long* a, int aSig, unsigned long value)
     return i;
 }
 
-int Multiply(unsigned long* a, unsigned long aSig,
-             unsigned long* b, unsigned long bSig,
-             unsigned long* result)
+/*o result tem que ter espaco para aSig + bSig digitos*/
+int Multiply(const unsigned long a[], unsigned long aSig,
+             const unsigned long b[], unsigned long bSig,
+             unsigned long result[])
 {
+    for (int i = 0; i < aSig + bSig; i++)
+        result[i] = 0;
+
+    //result tem que estar zerado!
+    assert(result != a); //nao pode ser a mesma memoria
+
     /*
        22
       1234 a
@@ -485,8 +653,8 @@ int Multiply(unsigned long* a, unsigned long aSig,
 
         for (size_t i = 0; i < aSig; ++i)
         {
-            unsigned long long ui = a[i];
-            unsigned long long vj = b[j];
+            unsigned long long ui = i < aSig ? a[i] : 0;
+            unsigned long long vj = j < bSig ? b[j] : 0;
             unsigned long long rij = j > 0 ? result[i + j] : 0;
             unsigned long long current = ui * vj + rij + k;
             result[i + j] = current % DIGIT_BASE;
@@ -776,7 +944,7 @@ unsigned long longdiv(unsigned long left[], /*dividendo*/
 
     /*limpa saida*/
     out[0] = 0;
-    printf("%s | %s\n", to_string_repr(r, rsize, buffer1), to_string_repr(d, dsize, buffer2));
+    //printf("%s | %s\n", to_string_repr(r, rsize, buffer1), to_string_repr(d, dsize, buffer2));
 
 
     /* n=4 digits  m = 2 digits
@@ -817,8 +985,8 @@ unsigned long longdiv(unsigned long left[], /*dividendo*/
             dqsize = MultiplyByDigit2(d, dsize, qt, dq);
         }
 
-        printf("%s\n", to_string_repr(r, rsize, buffer1));
-        for (int j = 0; j < (rsize - dqsize - k); j++)
+        //printf("%s\n", to_string_repr(r, rsize, buffer1));
+        /*for (int j = 0; j < (rsize - dqsize - k); j++)
         {
             printf("  ");
         }
@@ -826,6 +994,7 @@ unsigned long longdiv(unsigned long left[], /*dividendo*/
 
 
         printf("k=%d m=%u\n", k, m);
+        */
 
         out[k] = qt;
 
@@ -842,7 +1011,7 @@ unsigned long longdiv(unsigned long left[], /*dividendo*/
            vamos precisando de mais.
         */
         subtract_in_place(&r[k], rsize - k, dq, dsize);
-        printf("%s\n", to_string_repr(r, rsize, buffer2));
+        //printf("%s\n", to_string_repr(r, rsize, buffer2));
 
 
 
@@ -935,7 +1104,7 @@ unsigned long longmod(unsigned long left[],
             dqsize = MultiplyByDigit2(d, dsize, qt, dq);
         }
 
-        printf("%s - %s = ", to_string_repr(r, rsize, buffer1), to_string_repr(dq, dqsize, buffer2));
+        //printf("%s - %s = ", to_string_repr(r, rsize, buffer1), to_string_repr(dq, dqsize, buffer2));
 
 
         //printf("k=%d m=%u\n", k, m);
@@ -950,7 +1119,7 @@ unsigned long longmod(unsigned long left[],
         //difference(r, dq, k, m); //k ,
         subtract_in_place(&r[k], rsize - k, dq, dsize);
 
-        printf("r = %s\n", to_string_repr(r, rsize, buffer2));
+        //printf("r = %s\n", to_string_repr(r, rsize, buffer2));
 
 
 
@@ -961,6 +1130,11 @@ unsigned long longmod(unsigned long left[],
 };
 
 
+/*
+  tamanho de digitos do out deve ser igual a rightSize
+  exemplo 20 mod 5 = 4.
+  No pior caso maior mod vai ser 5-1 = 4
+*/
 unsigned long modulo(unsigned long left[],
                      int leftSize,
                      unsigned long right[],
@@ -977,9 +1151,10 @@ unsigned long modulo(unsigned long left[],
     {
         if (leftSize < rightSize)
         {
-            assert(false);//out = left
-            out[0] = 0;
-            return 1;
+            return copy_to(left, leftSize, out);
+            //assert(false);//out = left
+            //out[0] = 0;
+            //return 1;
         }
         else
         {
@@ -1152,22 +1327,6 @@ unsigned long Parse(const char* psz, unsigned long result[], int nDigits)
     return resultSize;
 }
 
-unsigned int ShiftRight(unsigned long number[],
-                        unsigned long size,
-                        unsigned long value)
-{
-    int carry = 0;                              // Clear the initial carry bit.
-    while (value--) {                           // For each bit to shift ...
-        for (int i = size - 1; i >= 0; --i) {   // For each element of the array from high to low ...
-            int next = (number[i] & 1) ? 0x80000000 : 0;  // ... if the low bit is set, set the carry bit.
-            number[i] = carry | (number[i] >> 1);       // Shift the element one bit left and addthe old carry.
-            carry = next;                       // Remember the old carry for next time.
-        }
-    }
-    return sig_digits(number, size);
-}
-
-
 unsigned int modular_pow(unsigned long base[],
                          unsigned long baseSize,
                          unsigned long exponent[],
@@ -1183,6 +1342,10 @@ unsigned int modular_pow(unsigned long base[],
     //result : = 1
         //base : = base mod modulus
     baseSize = modulo(base, baseSize, modulus, modulusSize, base);
+    
+    char buffer1[1000];
+    printf("%s\n", to_string_repr(base, baseSize, buffer1));
+
     //unsigned long result[100] = { 1 };
     result[0] = 1;
     unsigned long resultSize = 1;
@@ -1191,22 +1354,36 @@ unsigned int modular_pow(unsigned long base[],
     unsigned long two[] = { 2 };
     while (compare(exponent, exponentSize, zero, 1) > 0)
     {
+
         unsigned long r1[100];
         unsigned long r1Size = modulo(exponent, exponentSize, two, 1, r1);
 
         if (r1Size == 1 && r1[0] == 1)
         {
-            resultSize = Multiply(result, resultSize, base, baseSize, result);
-            resultSize = modulo(result, resultSize, modulus, modulusSize, result);
+            printf("result = %s\n", to_string_repr(result, resultSize, buffer1));
+            printf("base = %s\n", to_string_repr(base, baseSize, buffer1));
+
+            
+            r1Size = Multiply(result, resultSize, base, baseSize, r1);
+            printf("result = %s\n", to_string_repr(r1, r1Size, buffer1));
+
+            resultSize = modulo(r1, r1Size, modulus, modulusSize, result);
+            printf("result = %s\n", to_string_repr(result, resultSize, buffer1));
             //result: = (result * base) mod modulus
         }
 
-        ShiftRight(exponent, exponentSize, 1);
+        // x >> 1 mesmo que dividir por x / 2
+        exponentSize = quotient(exponent, exponentSize, 2);
+
+        printf("exponent = %s\n", to_string_repr(exponent, exponentSize, buffer1));
         //exponent: = exponent >> 1
         //base : = (base * base) mod modulus
 
         r1Size = Multiply(base, baseSize, base, baseSize, r1);
         baseSize = modulo(r1, r1Size, modulus, modulusSize, base);
+
+        printf("base = %s\n", to_string_repr(base, baseSize, buffer1));
+
     }
     return sig_digits(result, baseSize);
 }
