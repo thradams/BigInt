@@ -19,10 +19,10 @@ Attention code incomplete.
 #include <stdio.h>
 #include <limits.h>
 #include <string.h>
-#include < stdint.h >
+#include <stdint.h>
 #include <stdbool.h>
 
-#define BASE UINT32_MAX
+#define BASE 10 //UINT32_MAX
 
 struct number {
     uint32_t* data;
@@ -41,6 +41,8 @@ void number_print(struct number* a)
     printf("\n");
 }
 
+
+
 void number_swap(struct number* a, struct number* b)
 {
     struct number tmp = *a;
@@ -51,6 +53,7 @@ void number_swap(struct number* a, struct number* b)
 int number_reserve(struct number* p, int n)
 {
     if (n > p->capacity) {
+
         if ((size_t)n > (SIZE_MAX / (sizeof(p->data[0])))) {
             return EOVERFLOW;
         }
@@ -70,9 +73,9 @@ int compare(struct number* a, struct number* b)
     if (a->digits == b->digits)
     {
         for (int i = 0; i < a->digits; i++) {
-            if (a->data[i] == b->data)
+            if (a->data[i] == b->data[i])
                 continue;
-            return a->data[i] > b->data ? 1 : -1;
+            return a->data[i] > b->data[i] ? 1 : -1;
         }
         return 0;
     }
@@ -121,7 +124,7 @@ void number_destroy(struct number* p)
     free(p->data);
 }
 
-void multiply(struct number* a, struct number* b, struct number* result)
+void multiply(const struct number* a, const struct number* b, struct number* result)
 {
     number_reserve(result, a->digits * b->digits);
     memset(result->data, 0, result->capacity * sizeof(result->data[0]));
@@ -134,18 +137,24 @@ void multiply(struct number* a, struct number* b, struct number* result)
 
         uint32_t k = 0;
 
-        for (size_t i = 0; i < a->digits; ++i) {
+        for (int i = 0; i < a->digits; ++i) {
             uint64_t a_i = a->data[i];
             uint64_t b_j = b->data[j];
             uint64_t rij = j > 0 ? result->data[i + j] : 0;
+
+
+
+            /*does not overflow because*/
+            _Static_assert((uint64_t)UINT32_MAX * (uint64_t)UINT32_MAX + (uint64_t)UINT32_MAX + (uint64_t)UINT32_MAX == UINT64_MAX, "");
             uint64_t current = a_i * b_j + rij + k;
+
             result->data[i + j] = current % BASE;
             k = (uint32_t)(current / BASE);
         }
 
         result->data[j + a->digits] = k;
     }
-
+    result->digits = a->digits + b->digits;
     for (int i = result->digits - 1; i >= 0; i--) {
         if (result->data[i] != 0)
             break;
@@ -153,7 +162,7 @@ void multiply(struct number* a, struct number* b, struct number* result)
     }
 }
 
-void add(struct number* a, struct number* b, struct number* result)
+void add(const struct number* a, const  struct number* b, struct number* result)
 {
     number_reserve(result, a->digits + b->digits + 1);//todo
     memset(result->data, 0, result->capacity * sizeof(result->data[0]));
@@ -166,6 +175,8 @@ void add(struct number* a, struct number* b, struct number* result)
         uint64_t a_i = a->digits > i ? a->data[i] : 0;
         uint64_t b_i = b->digits > i ? b->data[i] : 0;
 
+        /*does not overflow because*/
+        _Static_assert((uint64_t)UINT32_MAX + (uint64_t)UINT32_MAX + (uint64_t)UINT32_MAX < UINT64_MAX, "");
         uint64_t current = a_i + b_i + k;
         result->data[i] = current % UINT_MAX;
         k = (uint32_t)(current / UINT_MAX);
@@ -196,7 +207,7 @@ void reverse(uint32_t* first, uint32_t* last)
     }
 }
 
-uint32_t mod(struct number* a, uint32_t value)
+uint32_t mod(const struct number* a, uint32_t value)
 {
     uint64_t carry = 0;
 
@@ -209,50 +220,30 @@ uint32_t mod(struct number* a, uint32_t value)
 
 
 
-unsigned long long trialdigit2(unsigned long long r,
-    unsigned long long d,
-    size_t k,
-    size_t m)
+
+
+struct number difference(const struct number* r, const struct number* dq, int k, int m)
 {
-    typedef unsigned long long ulong;
-    // r{3} = r[k + m .. k + m - 2]
-    // d{2} = d[m - 1..m-2]
-    size_t km = k + m;
-    double rkm = r[km];
-    double rkm_1 = r[km - 1];
-    double rkm_2 = r[km - 2];
-    double dm_1 = d[m - 1];
-    double dm_2 = d[m - 2];
-    double r3 = (rkm * BASE + rkm_1) * BASE + rkm_2;
-    double d2 = dm_1 * BASE + dm_2;
+    /*
+       r[k + m..k] : = r[k + m..k] − dq[m..0]; difference: = r
+    */
 
-    double r4 = r3 / d2;
-    if (r4 < (double)(BASE - 1))
-        return r4;
+    struct number r2 = { 0 };
+    number_reserve(&r2, r->digits);
+    memset(r2.data, 0, r->digits * sizeof(r->data[0]));
 
-    return (double)(BASE - 1);
-}
+    //{ 0 <= k <= k + m <= w }
+    uint32_t borrow = 0;
+    for (int i = 0; i < m; i++) {
 
+        uint32_t diff = r->data[i + k] - dq->data[i] - borrow + BASE;
+        r->data[i + k] = diff % BASE;
+        borrow = 1 - diff / BASE;
+    }
 
-struct number difference(struct number* r, struct number* dq, int k, int m)
-{
-  /*
-     r[k + m..k] : = r[k + m..k] − dq[m..0]; difference: = r 
-  */
-   
-    struct number r = { 0 };
-   //{ 0 <= k <= k + m <= w }
-   uint32_t borrow = 0;
-   for (int i = 0; i < m; i++) {
-
-       uint32_t diff = r.data[i + k] − dq->data[i] − borrow + BASE;
-       r.data[i + k] = diff % b;
-       borrow = 1 − diff / BASE;
-   }
-
-   //assume borrow = 0;
-   //difference: = r
-   return r;
+    //assume borrow = 0;
+    //difference: = r
+    return r2;
 }
 
 void multiply_in_place(struct number* a, uint32_t value)
@@ -268,64 +259,19 @@ void multiply_in_place(struct number* a, uint32_t value)
     int i = 0;
     for (; i < a->digits; i++)
     {
-        unsigned long long temp = a->data[i];
+        uint64_t temp = a->data[i];
         temp *= value;
         temp += carry;
+
         a->data[i] = temp % BASE;
         carry = temp / BASE;
     };
 
     if (carry != 0) {
         number_reserve(a, a->digits + 1);
-        a->data[i] = carry;
+        a->data[i] = (uint32_t)carry;
         a->digits++;
     }
-};
-
-void longdiv(struct number* a,
-    struct number* b,
-    struct number* r)
-{
-
-    const size_t n = a->digits;
-    const size_t m = b->digits;
-
-    typedef unsigned long  long ulong;
-
-    //RightIterator sigvlast = sig_digit_end(right_first, right_last);
-    ulong ym_1 = b->data[b->digits - 1];
-    ulong f = BASE / (ym_1 + 1);
-
-    multiply_in_place(&a, f);
-    multiply_in_place(&b, f);
-
-    for (int k = n - m; k >= 0; k--)
-    {
-        ulong qt = trialdigit2(a->data[0], b->data[0], (size_t)k, (size_t)m);
-
-        struct number dq = { 0 };
-        number_reserve(&dq, b->digits + 1);
-        memset(dq.data, 0, sizeof(dq.data[0]) * b->digits + 1);
-
-
-        multiply(right_first, right_last, qt, dq.begin(), dq.end());
-
-        if (compare(left_first + k, left_first + k + m,
-            dq.begin(), dq.begin() + m) == -1)
-        {
-            qt = qt - 1;
-            multiply<base>(left_first, left_last, qt, dq.begin(), dq.end());
-        }
-
-        out_first[k] = qt;
-        subtract_in_place<base>(left_first + k, left_first + k + m, dq.begin(), dq.begin() + m);
-    }
-
-    //fill leading zeroes
-    //for (size_t i = n - m + 1; i < out_last - out_first; i++)
-    //{
-      //  out_first[i] = 0;
-    //}
 };
 
 
@@ -341,7 +287,7 @@ void divide_in_place(struct number* a, uint32_t value)
     for (int i = a->digits - 1; i >= 0; i--) {
         uint64_t ui = a->data[i];
         uint64_t temp = carry * BASE + ui;
-        a->data[i] = temp / value;
+        a->data[i] = (uint32_t)temp / value;
         carry = temp % value;
     }
 
@@ -352,6 +298,102 @@ void divide_in_place(struct number* a, uint32_t value)
     }
 }
 
+
+struct number number_dup(const struct number* a) {
+
+    struct number r = { 0 };
+    number_reserve(&r, a->digits);
+    r.digits = a->digits;
+    memcpy(r.data, a->data, sizeof(a->data[0]) * a->digits);
+    return r;
+}
+
+
+int smaller(const struct number* r, const struct number* dq, int k, int m)
+{
+    //{ r[k + m..k] < dq[m..0] };
+    //{ 0 <= k <= k + m <= w }
+    int i = m;
+    int j = 0;
+    while (i != j) {
+        if (r->data[i + k] != dq->data[i])
+            j = i;
+        else
+            i = i - 1;
+    }
+    return r->data[i + k] < dq->data[i];
+}
+
+uint32_t trialdigit(const struct number* r, const struct number* d, uint32_t k, uint32_t m)
+{
+    uint32_t d2, km, r3;
+    //{ 2 <= m <= k + m <= w }
+    km = k + m;
+    r3 = (r->data[km] * BASE + r->data[km - 1]) * BASE + r->data[km - 2];
+    d2 = d->data[m - 1] * BASE + d->data[m - 2];
+    return (r3 / d2) < (BASE - 1) ? r3 / d2 : BASE - 1;
+}
+
+struct number longdiv(struct number* x, const struct number* y)
+{
+    assert(x->digits >= y->digits);
+
+
+    int n = x->digits;
+    int m = y->digits;
+
+    assert(2 <= m && m <= n);
+    //{ longdiv = x div y }
+    //var d, dq, q, r: number;
+    //f, k, qt: integer;
+
+    //{ 2 <= m <= n <= w }
+    uint32_t  f = BASE / (y->data[m - 1] + 1);
+
+    struct number r = { 0 };
+    r = number_dup(x);
+    multiply_in_place(&r, f);
+
+    number_print(&r);
+
+    struct number d = { 0 };
+    d = number_dup(y);
+    multiply_in_place(&d, f);
+
+    number_print(&d);
+
+    struct number q = { 0 };
+    number_reserve(&q, x->digits);
+    memset(q.data, 0, x->digits * sizeof(x->data[0]));
+
+    number_print(&q);
+
+    for (int k = n - m; k >= 0; k--)
+    {
+        //{ 2 <= m <= k + m <= n <= w }
+        uint32_t qt = trialdigit(&r, &d, k, m);
+
+        struct number dq = number_dup(&d);
+        multiply_in_place(&dq, qt);
+
+        number_print(&dq);
+
+        if (smaller(&r, &dq, k, m)) {
+            qt = qt - 1;
+
+            number_destroy(&dq);
+            dq = number_dup(&d);
+            multiply_in_place(&dq, qt);
+            number_print(&dq);
+
+        }
+        q.data[k] = qt;
+        r = difference(&r, &dq, k, m);
+        number_print(&r);
+    }
+    //longdiv: = q
+    return q;
+}
 
 
 struct number parse_number(const char* psz)
@@ -399,6 +441,21 @@ struct number parse_number(const char* psz)
     return r;
 }
 
+void number_set(struct number* a, uint64_t x)
+{
+    a->digits = 0;
+    a->data[0] = 0;
+
+
+    for (;;)
+    {
+        number_push_back(a, x % BASE);
+        x = x / BASE;
+        if (x == 0)
+            break;
+    }
+
+}
 bool number_is_zero(const struct number* a) {
     return a->digits == 0 ||
         (a->digits == 1 && a->data[0] == 0);
@@ -428,14 +485,15 @@ struct number  to_base10(struct number* number) {
 int main()
 {
 
-    struct number a = parse_number("4294967296");//4294967295 + 1
+    struct number a = parse_number("100");//4294967295 + 1
     number_print(&a);
+    //number_set(&a, 165465465465465424);
+    //number_print(&a);
 
-    struct number b = parse_number("34");
+    struct number b = parse_number("24");
     number_print(&b);
 
-    struct number r = { 0 };
-    multiply(&a, &b, &r);
+    struct number r = longdiv(&a, &b, &r);
     number_print(&r);
 
     struct number base10 = to_base10(&r);
